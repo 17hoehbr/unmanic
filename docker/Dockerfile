@@ -23,7 +23,7 @@ RUN apt-get update -y \
         gnupg \
         wget
             
-RUN apt-get install -y libexpat1=2.4.7-1ubuntu0.2
+#RUN apt-get install -y libexpat1=2.4.7-1ubuntu0.2
 RUN apt-get install -y libglib2.0-0=2.72.4-0ubuntu2.2
 RUN apt-get install -y libgomp1=12.3.0-1ubuntu1~22.04
 RUN apt-get install -y libharfbuzz0b=2.7.4-1ubuntu3.1
