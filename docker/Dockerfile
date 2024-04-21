@@ -23,17 +23,16 @@ RUN apt-get update -y \
         gnupg \
         wget
             
-RUN apt-get install -y \
-    libexpat1=2.4.7-1ubuntu0.2 \
-    libglib2.0-0=2.72.4-0ubuntu2.2 \
-    libgomp1=12.3.0-1ubuntu1~22.04 \
-    libharfbuzz0b=2.7.4-1ubuntu3.1 \
-    libmediainfo0v5=21.09+dfsg-4 \
-    libv4l-0=1.22.1-2build1 \
-    libx11-6=2:1.7.5-1ubuntu0.3 \
-    libxcb1=1.14-3ubuntu3 \
-    libxext6=2:1.3.4-1build1 \
-    libxml2=2.9.13+dfsg-1ubuntu0.4
+RUN apt-get install -y libexpat1=2.4.7-1ubuntu0.2
+RUN apt-get install -y libglib2.0-0=2.72.4-0ubuntu2.2
+RUN apt-get install -y libgomp1=12.3.0-1ubuntu1~22.04
+RUN apt-get install -y libharfbuzz0b=2.7.4-1ubuntu3.1
+RUN apt-get install -y libmediainfo0v5=21.09+dfsg-4
+RUN apt-get install -y libv4l-0=1.22.1-2build1
+RUN apt-get install -y libx11-6=2:1.7.5-1ubuntu0.3
+RUN apt-get install -y libxcb1=1.14-3ubuntu3
+RUN apt-get install -y libxext6=2:1.3.4-1build1
+RUN apt-get install -y libxml2=2.9.13+dfsg-1ubuntu0.4
     
 # Install all available media acceleration packages
 RUN apt-get install -y \
