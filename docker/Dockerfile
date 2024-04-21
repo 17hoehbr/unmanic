@@ -13,89 +13,77 @@ ENV \
 # TODO: Remove intel-opencl-icd and replace with suggested build by Jellyfin
 #   https://jellyfin.org/docs/general/administration/hardware-acceleration.html
 #   https://github.com/jellyfin/jellyfin/blob/master/Dockerfile
-RUN \
-    echo "**** Install build dependencies requirements ****" \
-        && apt-get update -y \
-        && apt-get install -y \
-            ca-certificates \
-            curl \
-            gnupg \
-            wget \
-    && \
-    echo "**** Install runtime packages ****" \
-        && apt-get install -y \
-            libexpat1=2.4.7-1ubuntu0.2 \
-            libglib2.0-0=2.72.4-0ubuntu2.2 \
-            libgomp1=12.3.0-1ubuntu1~22.04 \
-            libharfbuzz0b=2.7.4-1ubuntu3.1 \
-            libmediainfo0v5=21.09+dfsg-4 \
-            libv4l-0=1.22.1-2build1 \
-            libx11-6=2:1.7.5-1ubuntu0.3 \
-            libxcb1=1.14-3ubuntu3 \
-            libxext6=2:1.3.4-1build1 \
-            libxml2=2.9.13+dfsg-1ubuntu0.4 \
-    && \
-    echo "**** Install all available media acceleration packages ****" \
-        # va-driver-all: 
-        #   A meta-package for installing all available Video Acceleration API (VAAPI) drivers. Includes packages like:
-        #       - i965-va-driver
-        #       - intel-media-va-driver
-        #       - mesa-va-drivers
-        #       - libdrm2
-        #       - etc
-        && apt-get install -y \
-            va-driver-all \
-    && \
-    echo "**** Install arch specific packages for $(uname -m) ****" \
-        && sleep 2 \
+
+
+# Install build dependencies requirement
+RUN apt-get update -y \
+    && apt-get install -y \
+        ca-certificates \
+        curl \
+        gnupg \
+        wget
+            
+RUN apt-get install -y \
+    libexpat1=2.4.7-1ubuntu0.2 \
+    libglib2.0-0=2.72.4-0ubuntu2.2 \
+    libgomp1=12.3.0-1ubuntu1~22.04 \
+    libharfbuzz0b=2.7.4-1ubuntu3.1 \
+    libmediainfo0v5=21.09+dfsg-4 \
+    libv4l-0=1.22.1-2build1 \
+    libx11-6=2:1.7.5-1ubuntu0.3 \
+    libxcb1=1.14-3ubuntu3 \
+    libxext6=2:1.3.4-1build1 \
+    libxml2=2.9.13+dfsg-1ubuntu0.4
+    
+# Install all available media acceleration packages
+RUN apt-get install -y \
+    va-driver-all
+    
+# Install arch specific packages for $(uname -m)
+RUN sleep 2 \
+    if uname -m | grep -q x86; then \
+        echo "**** Add Intel Graphics repository  ****" \
+            && wget -qO - https://repositories.intel.com/gpu/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg \
+            && echo "deb [arch=amd64,i386 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/gpu/ubuntu jammy client" | tee /etc/apt/sources.list.d/intel-gpu-jammy.list \
         && \
-        if uname -m | grep -q x86; then \
-            echo "**** Add Intel Graphics repository  ****" \
-                && wget -qO - https://repositories.intel.com/gpu/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg \
-                && echo "deb [arch=amd64,i386 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/gpu/ubuntu jammy client" | tee /etc/apt/sources.list.d/intel-gpu-jammy.list \
-            && \
-            echo "**** Install Intel Media Drivers  ****" \
-                && apt-get update \
-                # intel-media-va-driver-non-free:
-                #   This is the primary driver for Intel's Video Acceleration API on Linux, which provides support for video encoding and decoding on Intel graphics hardware.
-                # libigdgmm12:
-                #   A part of the Intel Graphics Memory Management Library, which is used for managing graphics memory in an efficient and optimized way on Intel GPUs.
-                # libmfx1:
-                #   This is a library for Intel Media SDK runtime. It is necessary for applications that use Intel Quick Sync Video technology.
-                # libmfxgen1:
-                #   Similar to libmfx1, it's a part of the Intel Media SDK.
-                # libva-drm2 and libva2:
-                #   These are additional libraries needed for VAAPI to interface with the Direct Rendering Manager (DRM) and to provide the main API for VAAPI.
-                # libvpl2:
-                #   This is the successor to the Media SDK and provides a library for video processing.
-                && apt-get install -y \
-                    intel-media-va-driver-non-free \
-                    libigdgmm12 \
-                    libmfx1 \
-                    libmfxgen1 \
-                    libva-drm2 \
-                    libva2 \
-                    libvpl2 \
-            && \
-            echo ; \
-        fi \
-    && \
-    echo "**** Install hardware info tools packages ****" \
-        # hwinfo:
-        #   A hardware identification system that provides detailed information about all the hardware components of a computer.
-        # vainfo:
-        #   This utility displays information about the VAAPI capabilities of your hardware.
-        && apt-get install -y \
-            hwinfo \
-            vainfo \
-    && \
-    echo "**** Section cleanup ****" \
-        && apt-get clean autoclean -y \
-        && apt-get autoremove -y \
-        && rm -rf \
-            /var/lib/apt/lists/* \
-            /var/tmp/* \
-            /tmp/*
+        echo "**** Install Intel Media Drivers  ****" \
+            && apt-get update \
+            # intel-media-va-driver-non-free:
+            #   This is the primary driver for Intel's Video Acceleration API on Linux, which provides support for video encoding and decoding on Intel graphics hardware.
+            # libigdgmm12:
+            #   A part of the Intel Graphics Memory Management Library, which is used for managing graphics memory in an efficient and optimized way on Intel GPUs.
+            # libmfx1:
+            #   This is a library for Intel Media SDK runtime. It is necessary for applications that use Intel Quick Sync Video technology.
+            # libmfxgen1:
+            #   Similar to libmfx1, it's a part of the Intel Media SDK.
+            # libva-drm2 and libva2:
+            #   These are additional libraries needed for VAAPI to interface with the Direct Rendering Manager (DRM) and to provide the main API for VAAPI.
+            # libvpl2:
+            #   This is the successor to the Media SDK and provides a library for video processing.
+            && apt-get install -y \
+                intel-media-va-driver-non-free \
+                libigdgmm12 \
+                libmfx1 \
+                libmfxgen1 \
+                libva-drm2 \
+                libva2 \
+                libvpl2 \
+        && \
+        echo ; \
+    fi
+    
+# Install hardware info tools packages
+RUN apt-get install -y \
+    hwinfo \
+    vainfo
+    
+# Section cleanup
+RUN apt-get clean autoclean -y \
+    && apt-get autoremove -y \
+    && rm -rf \
+        /var/lib/apt/lists/* \
+        /var/tmp/* \
+        /tmp/*
 
 
 # Install commonly used command line tools
