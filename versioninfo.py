@@ -163,48 +163,10 @@ def get_git_version_info():
 
     :return:
     """
-    # Fetch the last tag
-    last_tag = 0
-    # Fetch the current commit ID
-    current_commit = subprocess.check_output(["git", "rev-parse", "--verify", "--short", "HEAD"]).strip().decode("utf-8")
-
-    # Create a long and short version string to return
-    short_version_string = last_tag
-    long_version_string = last_tag
-
-    # Fetch the amount of commits since the last tag
-    distance_since_last_tag = subprocess.check_output(
-        ["git", "rev-list", last_tag + "..HEAD", "--count"]
-    ).strip().decode("utf-8")
-
-    # Normalize short version string (saves getting spammed with useless warnings from setuptools about it)
-    if '-alpha' in short_version_string.lower():
-        short_version_string = short_version_string.replace("-alpha", "a")
-    elif '-beta' in short_version_string.lower():
-        short_version_string = short_version_string.replace("-beta", "b")
-    elif '-rc' in short_version_string.lower():
-        short_version_string = short_version_string.replace("-rc", "rc")
-
-    # Append a post tag if this is not a clean tagged build
-    if int(distance_since_last_tag) > 0:
-        # There are commits since the last tag
-        # Modify the version strings
-        short_version_string = '{}.post{}'.format(short_version_string, distance_since_last_tag)
-        long_version_string = '{}+{}'.format(long_version_string, current_commit)
-    else:
-        long_version_string = '{}~{}'.format(long_version_string, current_commit)
-
-    # Check if there are uncommitted changes on the directory
-    git_diff_status = subprocess.check_output(
-        "git diff-index --quiet HEAD -- || echo 'is_dirty'", shell=True
-    ).strip().decode("utf-8")
-    if git_diff_status == 'is_dirty':
-        # There are commits since the last tag
-        long_version_string = '{}+dirty'.format(long_version_string)
 
     return_dic = {
-        'short': short_version_string,
-        'long':  long_version_string
+        'short': '0.0.1',
+        'long':  '0.0.1~68b3db6' 
     }
 
     return return_dic
