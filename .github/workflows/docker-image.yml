@@ -30,4 +30,4 @@ jobs:
       run: |
         docker build -f ./docker/Dockerfile -t 17hoehbr/unmanic:latest .
         docker login -u "${{ secrets.DOCKER_USERNAME }}" --password "${{ secrets.DOCKER_PASSWORD }}"
-        docker push 17hoehbr/unmanic:latest
+        docker push ghcr.io/17hoehbr/unmanic:latest
