@@ -32,8 +32,10 @@ jobs:
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-    - name: Docker Build and Push
-      run: |
-        docker build -f ./docker/Dockerfile -t 17hoehbr/unmanic:latest .
-        docker login -u "${{ secrets.DOCKER_USERNAME }}" --password "${{ secrets.DOCKER_PASSWORD }}"
-        docker push ghcr.io/17hoehbr/unmanic:${{ steps.meta.outputs.tags }}
+    - name: Build and push the Docker image
+      uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
+      with:
+        context: ./docker
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
