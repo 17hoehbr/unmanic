@@ -67,14 +67,20 @@ jobs:
       - name: Generate release info
         id: release-info
         run: |
-          echo "tag_name=$(curl -s https://api.github.com/repos/Unmanic/unmanic/releases/latest | jq -r .tag_name)" >> $GITHUB_STATE
-          echo "release_name=$(curl -s https://api.github.com/repos/Unmanic/unmanic/releases/latest | jq -r .name)" >> $GITHUB_STATE
-          echo "body=$(curl -s https://api.github.com/repos/Unmanic/unmanic/releases/latest | jq -r .body)" >> $GITHUB_STATE
-          
+          release_data=$(curl -s https://api.github.com/repos/Unmanic/unmanic/releases/latest)
+          # Extract fields
+          tag_name=$(echo "$release_data" | jq -r .tag_name | jq -R @json)
+          release_name=$(echo "$release_data" | jq -r .name | jq -R @json)
+          body=$(echo "$release_data" | jq -r .body | jq -R @json)
+          # Write to $GITHUB_STATE
+          echo "tag_name=$tag_name" >> $GITHUB_STATE
+          echo "release_name=$release_name" >> $GITHUB_STATE
+          echo "body=$body" >> $GITHUB_STATE
+
       # Create Release
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ steps.release-info.outputs.tag_name }}
           name: ${{ steps.release-info.outputs.release_name }}
-          body: "${{ steps.release-info.outputs.body }}"
+          body: ${{ steps.release-info.outputs.body }}
