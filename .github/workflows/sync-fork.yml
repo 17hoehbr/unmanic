@@ -88,5 +88,5 @@ jobs:
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ steps.release-info.outputs.tag_name }}
-          name: ${{ steps.release-info.outputs.release_name }}
+          tag: $tag_name
+          name: $release_name
