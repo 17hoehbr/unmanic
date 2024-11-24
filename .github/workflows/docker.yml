@@ -1,19 +1,12 @@
-name: Build All Packages CI
+name: Docker Image CI
 
-on:
-  push:
-    branches: [ 'dev-**', 'pr-**', staging, master ]
-    tags: [ '**' ]
-  pull_request:
-    branches: [ staging, master ]
-  schedule:
-    # At 02:30 on Saturday
-    - cron:  '30 2 * * 6'
+on: 
+  release:
+    types: [published]
+  workflow_dispatch:
 
 jobs:
-
   integration_tests:
-
     name: Run integration tests
     runs-on: ubuntu-latest
 
@@ -21,27 +14,11 @@ jobs:
     # Fetch shallow git repository
     - uses: actions/checkout@v4
 
-    # Restore test video's cache
-    - name: Restore test videos cache
-      uses: actions/cache@v4
-      id: test_videos_cache
-      with:
-        path: tests/support_/videos
-        key: ${{ runner.os }}-test_videos-${{ hashFiles('tests/scripts_/download_test_files.sh') }}
-        restore-keys: |
-          ${{ runner.os }}-test_videos-
-
-    # Download any missing test videos
-    - name: Download any missing test videos
-      if: success() && steps.test_videos_cache.outputs.cache-hit != 'true'
-      run: |
-        bash -c "tests/scripts_/download_test_files.sh"
-
     # Setup python environment
     - name: Set up Python 3.7
       uses: actions/setup-python@v5
       with:
-        python-version: '3.7'
+        python-version: 3.7
 
     # Restore the python cache if it exists
     - name: Restore python cache
@@ -51,7 +28,6 @@ jobs:
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-
-
     # Restore the apt cache if it exists
     # TODO: Fix this cache. Its not really working at all. It would be nice to have tho.
     - name: Restore python cache
@@ -67,29 +43,11 @@ jobs:
       run: |
         [[ ! -z `sudo find /var/cache/apt/archives -type f -name "ffmpeg*.deb"` ]] && echo "no update" || sudo apt-get update
         sudo apt-get install -yq --no-install-recommends --download-only ffmpeg
-
     # Install FFMPEG
     - name: Install FFMPEG
       if: success()
       run: |
         sudo apt-get install -yq --no-install-recommends ffmpeg
-
-    # Install python dependencies for testing unmanic
-    - name: Install python dependencies
-      if: success()
-      run: |
-        python -m pip install --upgrade pip
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
-
-    # Run pytest unit tests
-    - name: Test with pytest
-      if: success()
-      run: |
-        echo "Using test videos:"
-        ls -l ./tests/support_/videos/*/
-        pytest -m integrationtest
-
   py_build:
 
     name: Build Python package
@@ -109,12 +67,11 @@ jobs:
         git fetch --prune --unshallow --tags
         echo exit code $?
         git tag --list
-
     # Setup python environment
-    - name: Set up Python 3.10
+    - name: Set up Python 3.11
       uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: 3.11
 
     # Restore the python cache if it exists
     - name: Restore python cache
@@ -124,14 +81,12 @@ jobs:
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-
-
     # Install python dependencies for building unmanic
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
-
     # Setup node environment for building unmanic's webui
     - uses: actions/setup-node@v4
       with:
@@ -145,11 +100,8 @@ jobs:
         python ./setup.py  --quiet --version
         echo "Long version:"
         python ./setup.py  --quiet fullversion
-        REPO_URL="https://github.com/${GITHUB_REPOSITORY}/raw/${GITHUB_REF#refs/heads}/"
-        sed -i "s|(./docs/|(${REPO_URL:?}/docs/|g" README.md
         python -m build --no-isolation --skip-dependency-check --wheel
         python -m build --no-isolation --skip-dependency-check --sdist
-
     # Read the python package distribution data (save version to file)
     - name: Read python package distribution data
       id: py_build_data
@@ -161,7 +113,6 @@ jobs:
         echo "py_bdist_file=${PY_BDIST_FILE}" >> $GITHUB_OUTPUT
         echo "py_bdist_path=${PY_BDIST_PATH}" >> $GITHUB_OUTPUT
         echo ${PY_VERSION} > dist/VERSION.txt
-
     # Upload python package distribution data artifact
     - uses: actions/upload-artifact@v4
       with:
@@ -196,22 +147,13 @@ jobs:
         PY_VERSION=$(cat ./dist/VERSION.txt)
         echo "py_version=${PY_VERSION}" >> $GITHUB_OUTPUT
 
-    # Use QEMU to build for other arch
+        # Add support for more platforms with QEMU (optional)
+        # https://github.com/docker/setup-qemu-action
     - name: Set up QEMU
-      if: success()
-      id: qemu
       uses: docker/setup-qemu-action@v3
-      with:
-        image: tonistiigi/binfmt:latest
-        platforms: all
-
-    # Use configure docker to use buildx to build the image
+    
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-      if: success()
-      id: buildx
-      with:
-        version: latest
 
     # List available build platforms
     - name: Available platforms
@@ -225,9 +167,8 @@ jobs:
       run: |
         echo  "GITHUB_REF:${GITHUB_REF}"
         echo  "GITHUB_REPOSITORY:${GITHUB_REPOSITORY}"
-        DOCKER_IMAGE=docker.io/josh5/unmanic
+        DOCKER_IMAGE=ghcr.io/17hoehbr/unmanic
         VERSION_TAG=${GITHUB_REF#refs/*/}
-
         DOCKER_TAGS=""
         if [[ ${VERSION_TAG%/merge} == 'master' ]]; then
           DOCKER_TAGS="${DOCKER_TAGS}${DOCKER_IMAGE}:latest,"
@@ -243,23 +184,11 @@ jobs:
             DOCKER_TAGS="${DOCKER_TAGS}${DOCKER_IMAGE}:latest,"
           fi
         fi
-
         DOCKER_PUSH="true"
-        if [[ ${DOCKER_IMAGE} != 'docker.io/josh5/unmanic' ]]; then
-          DOCKER_PUSH="false"
-        fi
-        if [[ ${VERSION_TAG%/merge} =~ "pr-"* ]]; then
-          DOCKER_PUSH="false"
-        fi
-        if [[ ${VERSION_TAG%/merge} =~ ^[0-9]+$ ]]; then
-          DOCKER_PUSH="false"
-        fi
-
         echo "docker_image=${DOCKER_IMAGE}" >> $GITHUB_OUTPUT
         echo "docker_tags=$(echo ${DOCKER_TAGS} | sed 's/,$//')" >> $GITHUB_OUTPUT
         echo "docker_platforms=linux/amd64,linux/arm64" >> $GITHUB_OUTPUT
         echo "docker_push=${DOCKER_PUSH}" >> $GITHUB_OUTPUT
-
     # Cache the build
     - name: Cache Docker layers
       uses: actions/cache@v4
@@ -269,15 +198,14 @@ jobs:
         key: ${{ runner.os }}-buildx-${{ github.sha }}
         restore-keys: |
           ${{ runner.os }}-buildx-
-    
-    # Login to Docker Hub
-    - name: Login to Docker Hub
-      if: success() && (startsWith(github.ref, 'refs/heads/') || startsWith(github.ref, 'refs/tags/'))
+
+    - name: Login to GitHub Container Registry
       uses: docker/login-action@v3
       with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-    
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
     # Run docker build and push
     - name: Docker Build and Push
       if: success()
@@ -304,36 +232,3 @@ jobs:
           rm -rf /tmp/.buildx-cache
           mv -v /tmp/.buildx-cache-new /tmp/.buildx-cache
         fi
-
-  build_pypi:
-
-    name: Publish package to PyPI
-    needs: py_build
-    runs-on: ubuntu-latest
-
-    steps:
-    # Fetch shallow git repository
-    - name: Checkout
-      uses: actions/checkout@v4
-
-    # Fetch all artifacts
-    - name: Download Artifact
-      uses: actions/download-artifact@v4
-      with:
-        path: ./artifacts/
-
-    # Restore python package distribution data
-    - name: Restore python package distribution data
-      id: py_build_data
-      run: |
-        mkdir -p ./dist
-        find ./artifacts/ -type f -name "*.whl" -exec cp -n {} ./dist/ \;
-        find ./artifacts/ -type f -name "*.tar.gz" -exec cp -n {} ./dist/ \;
-        ls -l ./dist/
-
-    # Push the artifacts to PyPI repo
-    - name: Publish distribution package to PyPI
-      if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
-      uses: pypa/gh-action-pypi-publish@master
-      with:
-        password: ${{ secrets.PYPI_TOKEN }}
