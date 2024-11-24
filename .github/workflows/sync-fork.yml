@@ -80,10 +80,6 @@ jobs:
           # Extract release_name
           release_name=$(echo "$release_data_compact" | jq -r .name)
           echo "release_name=$release_name" >> $GITHUB_STATE
-          
-          # Extract and JSON-encode body
-          body=$(echo "$release_data_compact" | jq -r .body)
-          echo "{body}={$body}" >> $GITHUB_STATE
 
 
       # Create Release
@@ -92,4 +88,3 @@ jobs:
         with:
           tag: ${{ steps.release-info.outputs.tag_name }}
           name: ${{ steps.release-info.outputs.release_name }}
-          body: ${{ steps.release-info.outputs.body }}
