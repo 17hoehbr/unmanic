@@ -26,11 +26,11 @@ jobs:
         uses: actions/cache@v4.1.2
         with:
           path: .last_synced_release
-          key: last-synced-release
+          key: ${{ steps.get_latest.outputs.last }}
 
   sync-upstream:
     needs: check-upstream
-    if: needs.check-upstream.outputs.latest_release != needs.check-upstream.outputs.last_synced
+    if: needs.check-upstream.outputs.latest_release != needs.check-upstream.outputs.last_synced || needs.check-upstream.outputs.last_synced == ''
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Fork Repository
