@@ -75,11 +75,11 @@ jobs:
           
           # Extract tag_name
           tag_name=$(echo "$release_data_compact" | jq -r .tag_name)
-          echo "tag_name=$tag_name" >> $GITHUB_STATE
+          echo "tag_name=$tag_name" >> "$GITHUB_ENV"
           
           # Extract release_name
           release_name=$(echo "$release_data_compact" | jq -r .name)
-          echo "release_name=$release_name" >> $GITHUB_STATE
+          echo "release_name=$release_name" >> "$GITHUB_ENV"
 
           echo $tag_name
           echo $release_name
