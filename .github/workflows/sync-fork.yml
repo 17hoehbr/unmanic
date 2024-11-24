@@ -67,22 +67,22 @@ jobs:
       - name: Generate release info
         id: release-info
         run: |
-          # Fetch the latest release data
           release_data=$(curl -s https://api.github.com/repos/Unmanic/unmanic/releases/latest)
           
-          # Compact the JSON for easier processing
           release_data_compact=$(echo "$release_data" | jq -c)
           
-          # Extract tag_name
           tag_name=$(echo "$release_data_compact" | jq -r .tag_name)
           echo "tag_name=$tag_name" >> "$GITHUB_ENV"
           
-          # Extract release_name
           release_name=$(echo "$release_data_compact" | jq -r .name)
           echo "release_name=$release_name" >> "$GITHUB_ENV"
 
+          release_name=$(echo "$release_data_compact" | jq -r .body)
+          echo "body=$body" >> "$GITHUB_ENV"
+          
           echo $tag_name
           echo $release_name
+          echo $body_name
 
       # Create Release
       - name: Create Release
@@ -90,3 +90,4 @@ jobs:
         with:
           tag: ${{ env.tag_name }}
           name: ${{ env.release_name }}
+          body: ${{ env.body }}
