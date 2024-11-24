@@ -68,13 +68,17 @@ jobs:
         id: release-info
         run: |
           release_data=$(curl -s https://api.github.com/repos/Unmanic/unmanic/releases/latest)
+          release_data_compact=$(echo "$release_data" | jq -c)
           # Extract fields
-          tag_name=$(echo "$release_data" | jq -r .tag_name | jq -R @json)
-          release_name=$(echo "$release_data" | jq -r .name | jq -R @json)
-          body=$(echo "$release_data" | jq -r .body | jq -R @json)
-          # Write to $GITHUB_STATE
+          tag_name=$(echo "$release_data_compact" | jq -r .tag_name)
           echo "tag_name=$tag_name" >> $GITHUB_STATE
+          
+          # Extract the release_name
+          release_name=$(echo "$release_data_compact" | jq -r .name)
           echo "release_name=$release_name" >> $GITHUB_STATE
+          
+          # Extract the body, handling any special formatting
+          body=$(echo "$release_data_compact" | jq -r .body)
           echo "body=$body" >> $GITHUB_STATE
 
       # Create Release
