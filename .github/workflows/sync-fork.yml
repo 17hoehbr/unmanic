@@ -1,0 +1,93 @@
+name: "Sync Upstream and Apply Custom Changes"
+
+on:
+  schedule:
+    - cron: "0 0 * * 0"  # Runs once a week (Sunday at midnight)
+  workflow_dispatch:
+
+jobs:
+  check-upstream:
+    runs-on: ubuntu-latest
+    outputs:
+      latest_release: ${{ steps.get_latest.outputs.latest }}
+      last_synced: ${{ steps.get_latest.outputs.last }}
+    steps:
+      # Check the latest release from upstream
+      - name: Fetch Latest Upstream Release
+        id: get_latest
+        run: |
+          LATEST_RELEASE=$(curl -s https://api.github.com/repos/Unmanic/unmanic/releases/latest | jq -r .tag_name)
+          LAST_SYNCED_RELEASE=$(cat .last_synced_release 2>/dev/null || echo "none")
+          echo "{latest}={$LATEST_RELEASE}" >> $GITHUB_STATE
+          echo "{last}={$LAST_SYNCED_RELEASE}" >> $GITHUB_STATE
+
+      # Cache the last synced release
+      - name: Cache Release State
+        uses: actions/cache@v4.1.2
+        with:
+          path: .last_synced_release
+          key: ${{ steps.get_latest.outputs.last || 0}}
+
+  sync-upstream:
+    needs: check-upstream
+    if: needs.check-upstream.outputs.latest_release != needs.check-upstream.outputs.last_synced || needs.check-upstream.outputs.last_synced == 0
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Fork Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add Upstream Repository
+        run: |
+          git remote add upstream https://github.com/Unmanic/unmanic.git
+          git fetch upstream
+          git checkout master
+
+      - name: Configure Git User
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge Changes from Upstream
+        run: |
+          git merge --no-edit -X theirs upstream/master
+          git reset .github/workflows/  # Make sure no workflow files are staged
+          git reset ./foss-piracy.patch
+          
+      - name: Apply patch
+        run: |
+          git apply -C1 --ignore-space-change --verbose ./foss-piracy.patch
+          
+      # Push merged changes to fork
+      - name: Push Changes to Fork
+        run: |
+          git push origin master
+
+      - name: Generate release info
+        id: release-info
+        run: |
+          release_data=$(curl -s https://api.github.com/repos/Unmanic/unmanic/releases/latest)
+          
+          release_data_compact=$(echo "$release_data" | jq -c)
+          
+          tag_name=$(echo "$release_data_compact" | jq -r .tag_name)
+          echo "tag_name=$tag_name" >> "$GITHUB_ENV"
+          
+          release_name=$(echo "$release_data_compact" | jq -r .name)
+          echo "release_name=$release_name" >> "$GITHUB_ENV"
+
+          release_name=$(echo "$release_data_compact" | jq -r .body)
+          echo "body=$body" >> "$GITHUB_ENV"
+          
+          echo $tag_name
+          echo $release_name
+          echo $body_name
+
+      # Create Release
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ env.tag_name }}
+          name: ${{ env.release_name }}
+          body: ${{ env.body }}
