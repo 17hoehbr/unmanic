@@ -67,12 +67,9 @@ jobs:
       - name: Generate release info
         id: release-info
         run: |
-          TAG_NAME<<$(curl -s https://api.github.com/repos/Unmanic/unmanic/releases/latest | jq -r .tag_name)
-          RELEASE_NAME<<$(curl -s https://api.github.com/repos/Unmanic/unmanic/releases/latest | jq -r .name)
-          BODY<<$(curl -s https://api.github.com/repos/Unmanic/unmanic/releases/latest | jq -r .body)
-          echo "{tag_name}={$TAG_NAME}" >> $GITHUB_STATE \
-          echo "{release_name}={$RELEASE_NAME}" >> $GITHUB_STATE \
-          echo "{body}={$BODY}" >> $GITHUB_STATE
+          echo "tag_name=$(curl -s https://api.github.com/repos/Unmanic/unmanic/releases/latest | jq -r .tag_name)" >> $GITHUB_STATE \
+          echo "release_name=$(curl -s https://api.github.com/repos/Unmanic/unmanic/releases/latest | jq -r .name)" >> $GITHUB_STATE \
+          echo "body=$(curl -s https://api.github.com/repos/Unmanic/unmanic/releases/latest | jq -r .body)" >> $GITHUB_STATE
           
       # Create Release
       - name: Create Release
